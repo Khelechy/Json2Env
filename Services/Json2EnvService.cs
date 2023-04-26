@@ -38,19 +38,21 @@ namespace Json2Env.Services
         }
         private async Task<string> Convert(string filePath, SeperatorEnum seperator, bool nullable = false)
         {
-            var builder = new ConfigurationBuilder();
-            string result = string.Empty;
-
-            string jsonString = File.ReadAllText(@filePath);
-            var stream = new MemoryStream(jsonString.Length);
-            var sw = new StreamWriter(stream);
-            await sw.WriteAsync(jsonString);
-            await sw.FlushAsync();
-            stream.Position = 0;
-
-            builder.AddJsonStream(stream); 
+            
             try
             {
+                var builder = new ConfigurationBuilder();
+                string result = string.Empty;
+
+                string jsonString = File.ReadAllText(@filePath);
+                var stream = new MemoryStream(jsonString.Length);
+                var sw = new StreamWriter(stream);
+                await sw.WriteAsync(jsonString);
+                await sw.FlushAsync();
+                stream.Position = 0;
+
+                builder.AddJsonStream(stream);
+
                 var configurationRoot = builder.Build();
 
                 var sb = new StringBuilder();
@@ -63,16 +65,28 @@ namespace Json2Env.Services
                     {
                         newKey = newKey.Replace(":", "__");
                     }
-                    sb.AppendFormat(format, newKey, value);
-                    sb.AppendLine();
+                    if (value != null && value.Contains(" "))
+                    {
+                        sb.AppendFormat(format, newKey, $"\'{value}\'");
+                        sb.AppendLine();
+                    }
+                    else
+                    {
+                        sb.AppendFormat(format, newKey, value);
+                        sb.AppendLine();
+                    }  
                 }
 
                 result = sb.ToString();
                 stream.Flush();
 
                 return result;
+            }catch (DirectoryNotFoundException)
+            {
+                Console.WriteLine($"Filepath: {filePath} does not exist");
+                return "";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return "";
             }
